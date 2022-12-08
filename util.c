@@ -35,7 +35,6 @@ void init(int port) {
   struct sockaddr_in addr;
   int ret_val;
   int flag;
-  int port = 1111;
   
    
    
@@ -46,25 +45,27 @@ void init(int port) {
    
    
    
-   // TODO: Create a socket and save the file descriptor to sd (declared above)
-   // This socket should be for use with IPv4 and for a TCP connection.
-   sd = socket(PF_INET, SOCK_STREAM, 0);
+  // TODO: Create a socket and save the file descriptor to sd (declared above)
+  // This socket should be for use with IPv4 and for a TCP connection.
+  sd = socket(PF_INET, SOCK_STREAM, 0);
 
-   // TODO: Change the socket options to be reusable using setsockopt(). 
+  // TODO: Change the socket options to be reusable using setsockopt(). 
+  int enable = 1;
   setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char*) &enable, sizeof(int));
 
    // TODO: Bind the socket to the provided port.
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
   addr.sin_port = htons(port); //server picks the port
-  bind (sd, (struct sockaddr*) &addr, sizeof(addr));
 
-   // TODO: Mark the socket as a pasive socket. (ie: a socket that will be used to receive connections)
-   listen (sd, 5);
+  bind (sd, (struct sockaddr*) &addr, sizeof(addr));
+  
+  // TODO: Mark the socket as a pasive socket. (ie: a socket that will be used to receive connections)
+  listen (sd, 5);
    
-   // We save the file descriptor to a global variable so that we can use it in accept_connection().
-   master_fd = sd;
-   printf("UTILS.O: Server Started on Port %d\n", port);
+  // We save the file descriptor to a global variable so that we can use it in accept_connection().
+  master_fd = sd;
+  printf("UTILS.O: Server Started on Port %d\n", port);
 }
 
 
@@ -135,13 +136,23 @@ int get_request(int fd, char *filename) {
     **********************************************/
     
     
-   char buf[2048];
+  char buf[2048];
    
    // INTERIM TODO: Read the request from the file descriptor into the buffer
+  if ((read(fd, buf, sizeof(char)*2047))==-1){
+    printf("error reading fd \n");
+  }
+  buf[2047] = '\0'; // convert buffer to string since we'll need that later
    
    // HINT: Attempt to read 2048 bytes from the file descriptor. 
    
    // INTERIM TODO: Print the first line of the request to the terminal.
+  int i = 0;
+  while ((buf[i] != '\n') && (buf[i] != '\0')){
+    printf("%c", buf[i]);
+    i++;
+  }
+  printf("\n");
    
    // TODO: Ensure that the incoming request is a properly formatted HTTP "GET" request
    // The first line of the request must be of the form: GET <file name> HTTP/1.0 
