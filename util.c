@@ -129,48 +129,77 @@ int accept_connection(void) {
 ************************************************/
 int get_request(int fd, char *filename) {
 
-      /**********************************************
-    * IMPORTANT!
-    * THIS FUNCTION DOES NOT NEED TO BE COMPLETE FOR THE INTERIM SUBMISSION, BUT YOU WILL NEED
-    * CODE IN IT FOR THE INTERIM SUBMISSION!!!!! 
-    **********************************************/
+    /**********************************************
+  * IMPORTANT!
+  * THIS FUNCTION DOES NOT NEED TO BE COMPLETE FOR THE INTERIM SUBMISSION, BUT YOU WILL NEED
+  * CODE IN IT FOR THE INTERIM SUBMISSION!!!!! 
+  **********************************************/
     
     
   char buf[2048];
    
-   // INTERIM TODO: Read the request from the file descriptor into the buffer
-  if ((read(fd, buf, sizeof(char)*2047))==-1){
+  // INTERIM TODO: Read the request from the file descriptor into the buffer
+  if ((read(fd, buf, sizeof(char)*2047)) == -1){
     printf("error reading fd \n");
   }
   buf[2047] = '\0'; // convert buffer to string since we'll need that later
    
-   // HINT: Attempt to read 2048 bytes from the file descriptor. 
-   
-   // INTERIM TODO: Print the first line of the request to the terminal.
+  // HINT: Attempt to read 2048 bytes from the file descriptor. 
+
+  // INTERIM TODO: Print the first line of the request to the terminal.
   int i = 0;
+  printf("Interim: ");
   while ((buf[i] != '\n') && (buf[i] != '\0')){
     printf("%c", buf[i]);
     i++;
   }
   printf("\n");
    
-   // TODO: Ensure that the incoming request is a properly formatted HTTP "GET" request
-   // The first line of the request must be of the form: GET <file name> HTTP/1.0 
-   // or: GET <file name> HTTP/1.1
-   
-   // HINT: It is recommended that you look up C string functions such as sscanf and strtok for
-   // help with parsing the request.
-   
-   // TODO: Extract the file name from the request
-   
-   // TODO: Ensure the file name does not contain with ".." or "//"
-   // FILE NAMES WHICH CONTAIN ".." OR "//" ARE A SECURITY THREAT AND MUST NOT BE ACCEPTED!!!
-   
-   // HINT: It is recommended that you look up the strstr function for help looking for faulty file names.
+  // TODO: Ensure that the incoming request is a properly formatted HTTP "GET" request
+  // The first line of the request must be of the form: GET <file name> HTTP/1.0 
+  // or: GET <file name> HTTP/1.1
+  // HINT: It is recommended that you look up C string functions such as sscanf and strtok for
+  // help with parsing the request.
 
-   // TODO: Copy the file name to the provided buffer
+  //User request
+  // TODO: Extract the file name from the request
+  char* method = strtok(buf,  " \t\r\n");
+  char* filePath = strtok(NULL, " \t");
+  char* protocol = strtok(NULL, " \t\r\n"); 
+  printf("Get: %s\n", method);
+  printf("File: %s\n", filePath);
+  printf("Protocol: %s\n", protocol);
 
-   return 0;
+  //Expected Request
+  char eGet[4];
+  char httpVersionOne[9];
+  char httpVersionTwo[9];
+  strcpy(eGet, "Get ");
+  strcpy(httpVersionOne, " HTTP/1.0");
+  strcpy(httpVersionTwo, " HTTP/1.1");
+  //fprintf(stderr, eGet);
+
+  char* expectedIn = strcat(eGet, filename);
+  //char* expectedInputOne = strcat(expectedIn, httpVersionOne);
+  //char* expectedInputTwo = strcat(expectedIn, httpVersionTwo);
+//fprintf(stderr, "expectedIn: %s", expectedIn);
+//printf("Expected Input One: %s", expectedInputOne);
+  //printf("Compare 0: %d", strcmp())
+  
+
+
+  // TODO: Ensure the file name does not contain with ".." or "//"
+  // FILE NAMES WHICH CONTAIN ".." OR "//" ARE A SECURITY THREAT AND MUST NOT BE ACCEPTED!!!
+  // HINT: It is recommended that you look up the strstr function for help looking for faulty file names.
+  if(strstr(filePath, ".."))
+    fprintf(stderr, "Error: .. Found");
+  if(strstr(filePath, "//"))
+    fprintf(stderr, "Error: // Found");
+
+  // TODO: Copy the file name to the provided buffer
+  buf = filePath;
+
+  return 0;
 }
 
 
@@ -218,11 +247,24 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     */
     
     // TODO: Send the HTTP headers to the client
-    
+    char httpResponse[] = "HTTP/1.0 200 OK\n";
+    char contentLength[] = "Content-Length: ";
+    strcat(contentLength, numbytes);
+    strcat(contentLength, "\n");
+    char contentType[] = "Content-Type: ";
+    strcat(contentType, content_type);
+    strcat(contentType, "\n");
+    char closeConnection[] = "Connection: Close\n\n";
+    fprintf(stderr, "%s", httpResponse);
+    fprintf(stderr, "%s", contentLength);   
+    fprintf(stderr, "%s", contentType);
+    fprintf(stderr, "%s", closeConnection);
+
     // IMPORTANT: Add an extra new-line to the end. There must be an empty line between the 
     // headers and the file contents, as in the example above.
-    
+
     // TODO: Send the file contents to the client
+
     
     // TODO: Close the connection to the client
     
@@ -242,7 +284,7 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
       - buf is a pointer to the location of the error text
    - returns 0 on success, nonzero on failure.
 ************************************************/
-int return_error(int fd, char *buf) {
+int return_error(int fd, char *buf) { 
 
    // TODO: Prepare the headers to send to the client
    // REQUIRED: First line must be "HTTP/1.0 404 Not Found"
@@ -264,6 +306,9 @@ int return_error(int fd, char *buf) {
     * 
     * <Error Message>
     */
+   char notFound[] = "HTTP/1.0 404 Not Found";
+   char contentLength[] = "Content-Length: ":
+   char closeConnection[] = "Connection: Close";
     
     // TODO: Send headers to the client
     
