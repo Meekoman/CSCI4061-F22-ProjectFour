@@ -134,16 +134,16 @@ int get_request(int fd, char *filename) {
   * THIS FUNCTION DOES NOT NEED TO BE COMPLETE FOR THE INTERIM SUBMISSION, BUT YOU WILL NEED
   * CODE IN IT FOR THE INTERIM SUBMISSION!!!!! 
   **********************************************/
-    
-    
+
+
   char buf[2048];
-   
+
   // INTERIM TODO: Read the request from the file descriptor into the buffer
   if ((read(fd, buf, sizeof(char)*2047)) == -1){
     printf("error reading fd \n");
   }
   buf[2047] = '\0'; // convert buffer to string since we'll need that later
-   
+
   // HINT: Attempt to read 2048 bytes from the file descriptor. 
 
   // INTERIM TODO: Print the first line of the request to the terminal.
@@ -154,7 +154,7 @@ int get_request(int fd, char *filename) {
     i++;
   }
   printf("\n");
-   
+
   // TODO: Ensure that the incoming request is a properly formatted HTTP "GET" request
   // The first line of the request must be of the form: GET <file name> HTTP/1.0 
   // or: GET <file name> HTTP/1.1
@@ -163,41 +163,35 @@ int get_request(int fd, char *filename) {
 
   //User request
   // TODO: Extract the file name from the request
-  char* method = strtok(buf,  " \t\r\n");
-  char* filePath = strtok(NULL, " \t");
+  char* method = strtok(buf, " \t\r\n");
+  char* filePath = strtok(NULL," \t");
   char* protocol = strtok(NULL, " \t\r\n"); 
   printf("Get: %s\n", method);
   printf("File: %s\n", filePath);
   printf("Protocol: %s\n", protocol);
 
-  //Expected Request
-  char eGet[4];
-  char httpVersionOne[9];
-  char httpVersionTwo[9];
-  strcpy(eGet, "Get ");
-  strcpy(httpVersionOne, " HTTP/1.0");
-  strcpy(httpVersionTwo, " HTTP/1.1");
-  //fprintf(stderr, eGet);
-
-  char* expectedIn = strcat(eGet, filename);
-  //char* expectedInputOne = strcat(expectedIn, httpVersionOne);
-  //char* expectedInputTwo = strcat(expectedIn, httpVersionTwo);
-//fprintf(stderr, "expectedIn: %s", expectedIn);
-//printf("Expected Input One: %s", expectedInputOne);
-  //printf("Compare 0: %d", strcmp())
-  
+  if (strcmp(method, "GET") != 0) {
+    fprintf(stderr, "Not proper format. Not GET\n");
+    return -1;
+  }
+  else if (strncmp(protocol, "HTTP/1.0", 8) != 0 && strncmp(protocol, "HTTP/1.1", 8) != 0) {
+    fprintf(stderr, "Not proper format, HTTP");
+    return -1;
+  }
 
 
   // TODO: Ensure the file name does not contain with ".." or "//"
   // FILE NAMES WHICH CONTAIN ".." OR "//" ARE A SECURITY THREAT AND MUST NOT BE ACCEPTED!!!
   // HINT: It is recommended that you look up the strstr function for help looking for faulty file names.
-  if(strstr(filePath, ".."))
+  
+  if (strstr(filePath, "..") || strstr(filePath, "//")){
     fprintf(stderr, "Error: .. Found");
-  if(strstr(filePath, "//"))
-    fprintf(stderr, "Error: // Found");
+    return -1;
+  }
+
 
   // TODO: Copy the file name to the provided buffer
-  buf = filePath;
+  strcpy(buf, filename);
 
   return 0;
 }
@@ -245,20 +239,31 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     * 
     * <File contents>
     */
-    
+  fprintf(stderr, "Made to this point: return_result");
+
     // TODO: Send the HTTP headers to the client
     char httpResponse[] = "HTTP/1.0 200 OK\n";
     char contentLength[] = "Content-Length: ";
-    strcat(contentLength, numbytes);
+    char numberOfBytes[sizeof(int) * 20];
+    sprintf(numberOfBytes, "%d", numbytes);
+
+
+
+
+    strcat(contentLength, numberOfBytes);
     strcat(contentLength, "\n");
     char contentType[] = "Content-Type: ";
     strcat(contentType, content_type);
     strcat(contentType, "\n");
     char closeConnection[] = "Connection: Close\n\n";
+
+    //Testing
     fprintf(stderr, "%s", httpResponse);
     fprintf(stderr, "%s", contentLength);   
     fprintf(stderr, "%s", contentType);
     fprintf(stderr, "%s", closeConnection);
+
+//write(fd, buf, numbytes);
 
     // IMPORTANT: Add an extra new-line to the end. There must be an empty line between the 
     // headers and the file contents, as in the example above.
@@ -306,15 +311,24 @@ int return_error(int fd, char *buf) {
     * 
     * <Error Message>
     */
-   char notFound[] = "HTTP/1.0 404 Not Found";
-   char contentLength[] = "Content-Length: ":
-   char closeConnection[] = "Connection: Close";
-    
+
+
+   char message[2048];
+   strcpy(message, buf);
+
+   char notFound[] = "HTTP/1.0 404 Not Found\n";
+   char contentLength[] = "Content-Length: ";
+   char closeConnection[] = "\nConnection: Close\n";
+//fprintf(stderr, "Made to this point: return_error One");
+
     // TODO: Send headers to the client
-    
+//fprintf(stderr, "Made to this point: return_error Two");
+    write(fd, notFound, sizeof(char*) * 25);
+
     // TODO: Send the error message to the client
-    
+    write(fd, message, 2048);
     // TODO: Close the connection with the client.
-    
+    close(master_fd);
+
     return 0;
 }
