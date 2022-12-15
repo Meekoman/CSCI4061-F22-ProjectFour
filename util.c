@@ -190,8 +190,10 @@ int get_request(int fd, char *filename) {
   }
 
 
-  // TODO: Copy the file name to the provided buffer
-  strcpy(buf, filename);
+  // TODO: Copy the file name to the provided buffer so it can be used elsewhere
+  strncpy(filename, filePath, 1023);
+
+  printf("buffer: %s \n", filename);
 
   return 0;
 }
@@ -239,7 +241,7 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     * 
     * <File contents>
     */
-  fprintf(stderr, "Made to this point: return_result");
+    fprintf(stderr, "Made to this point: return_result \n");
 
     // TODO: Send the HTTP headers to the client
     char httpResponse[] = "HTTP/1.0 200 OK\n";
@@ -316,14 +318,14 @@ int return_error(int fd, char *buf) {
    char message[2048];
    strcpy(message, buf);
 
-   char notFound[] = "HTTP/1.0 404 Not Found\n";
+   char notFound[] = "HTTP/1.0 404 Not Found\n"; // size = 24
    char contentLength[] = "Content-Length: ";
    char closeConnection[] = "\nConnection: Close\n";
 //fprintf(stderr, "Made to this point: return_error One");
 
     // TODO: Send headers to the client
 //fprintf(stderr, "Made to this point: return_error Two");
-    write(fd, notFound, sizeof(char*) * 25);
+    write(fd, notFound, (sizeof(char) * 24));
 
     // TODO: Send the error message to the client
     write(fd, message, 2048);
