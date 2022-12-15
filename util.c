@@ -255,10 +255,10 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     // headers and the file contents, as in the example above
 
     //debug: 
-    fprintf(stderr, "HTTP Response:    %s", httpResponse);
-    fprintf(stderr, "Content Length:   %s", contentLength);   
-    fprintf(stderr, "Content type:     %s", contentType);
-    fprintf(stderr, "Close Connection: %s", closeConnection);
+    // fprintf(stderr, "HTTP Response:    %s", httpResponse);
+    // fprintf(stderr, "Content Length:   %s", contentLength);   
+    // fprintf(stderr, "Content type:     %s", contentType);
+    // fprintf(stderr, "Close Connection: %s", closeConnection);
 
     write(fd, httpResponse, strlen(httpResponse));
     write(fd, contentLength, strlen(contentLength));
@@ -312,20 +312,24 @@ int return_error(int fd, char *buf) {
     */
 
 
-   char message[2048];
-   strcpy(message, buf);
+   
+   int messagelen = strlen(buf);
+   char contentLength[35];
 
-   char notFound[] = "HTTP/1.0 404 Not Found\n"; // size = 24
-   char contentLength[] = "Content-Length: ";
-   char closeConnection[] = "\nConnection: Close\n";
-//fprintf(stderr, "Made to this point: return_error One");
+
+
+  char notFound[] = "HTTP/1.0 404 Not Found\n\0"; // size = 24
+  sprintf(contentLength, "Content-Length: %d\n", messagelen);
+  char closeConnection[] = "Connection: Close\n\n\0 ";
+
 
     // TODO: Send headers to the client
-//fprintf(stderr, "Made to this point: return_error Two");
-    write(fd, notFound, (sizeof(char) * 24));
+    write(fd, notFound, strlen(notFound));
+    write(fd, contentLength, strlen(contentLength));
+    write(fd, closeConnection, strlen(closeConnection));
 
     // TODO: Send the error message to the client
-    write(fd, message, 2048);
+    write(fd, buf, messagelen);
 
     // TODO: Close the connection with the client.
     close(fd);
