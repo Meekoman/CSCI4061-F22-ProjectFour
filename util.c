@@ -241,39 +241,36 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     * 
     * <File contents>
     */
-    fprintf(stderr, "Made to this point: return_result \n");
 
     // TODO: Send the HTTP headers to the client
-    char httpResponse[] = "HTTP/1.0 200 OK\n";
-    char contentLength[] = "Content-Length: ";
-    char numberOfBytes[sizeof(int) * 20];
-    sprintf(numberOfBytes, "%d", numbytes);
+    char contentLength[1024]; //make these smaller later
+    char contentType[1024];
+    
 
-
-
-
-    strcat(contentLength, numberOfBytes);
-    strcat(contentLength, "\n");
-    char contentType[] = "Content-Type: ";
-    strcat(contentType, content_type);
-    strcat(contentType, "\n");
-    char closeConnection[] = "Connection: Close\n\n";
-
-    //Testing
-    fprintf(stderr, "%s", httpResponse);
-    fprintf(stderr, "%s", contentLength);   
-    fprintf(stderr, "%s", contentType);
-    fprintf(stderr, "%s", closeConnection);
-
-//write(fd, buf, numbytes);
-
+    char httpResponse[] = "HTTP/1.0 200 OK\n\0";
+    sprintf(contentLength, "Content-Length: %d\n", numbytes);
+    sprintf(contentType, "Content-Type: %s\n", content_type);
+    char closeConnection[] = "Connection: Close\n\n\0";
     // IMPORTANT: Add an extra new-line to the end. There must be an empty line between the 
-    // headers and the file contents, as in the example above.
+    // headers and the file contents, as in the example above
+
+    //debug: 
+    fprintf(stderr, "HTTP Response:    %s", httpResponse);
+    fprintf(stderr, "Content Length:   %s", contentLength);   
+    fprintf(stderr, "Content type:     %s", contentType);
+    fprintf(stderr, "Close Connection: %s", closeConnection);
+
+    write(fd, httpResponse, strlen(httpResponse));
+    write(fd, contentLength, strlen(contentLength));
+    write(fd, contentType, strlen(contentType));
+    write(fd, closeConnection, strlen(closeConnection));
+    
 
     // TODO: Send the file contents to the client
-
+    write(fd, buf, numbytes);
     
     // TODO: Close the connection to the client
+    close(fd);
     
     return 0;
 }
@@ -329,8 +326,9 @@ int return_error(int fd, char *buf) {
 
     // TODO: Send the error message to the client
     write(fd, message, 2048);
+
     // TODO: Close the connection with the client.
-    close(master_fd);
+    close(fd);
 
     return 0;
 }
