@@ -20,9 +20,6 @@ int master_fd = -1;
 pthread_mutex_t accept_con_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
-
-
-
 /**********************************************
  * init
    - port is the number of the port you want the server to be
@@ -35,41 +32,24 @@ void init(int port) {
   struct sockaddr_in addr;
   int ret_val;
   int flag;
-  
    
-   
-   /**********************************************
-    * IMPORTANT!
-    * ALL TODOS FOR THIS FUNCTION MUST BE COMPLETED FOR THE INTERIM SUBMISSION!!!!
-    **********************************************/
-   
-   
-   
-  // TODO: Create a socket and save the file descriptor to sd (declared above)
   // This socket should be for use with IPv4 and for a TCP connection.
   sd = socket(PF_INET, SOCK_STREAM, 0);
 
-  // TODO: Change the socket options to be reusable using setsockopt(). 
   int enable = 1;
   setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char*) &enable, sizeof(int));
 
-   // TODO: Bind the socket to the provided port.
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
   addr.sin_port = htons(port); //server picks the port
 
   bind (sd, (struct sockaddr*) &addr, sizeof(addr));
   
-  // TODO: Mark the socket as a pasive socket. (ie: a socket that will be used to receive connections)
   listen (sd, 5);
    
-  // We save the file descriptor to a global variable so that we can use it in accept_connection().
   master_fd = sd;
   printf("UTILS.O: Server Started on Port %d\n", port);
 }
-
-
-
 
 
 /**********************************************
@@ -86,30 +66,14 @@ int accept_connection(void) {
    uint addr_len;
    addr_len = sizeof(new_recv_addr);
    
-   
-   
-   /**********************************************
-    * IMPORTANT!
-    * ALL TODOS FOR THIS FUNCTION MUST BE COMPLETED FOR THE INTERIM SUBMISSION!!!!
-    **********************************************/
-   
-   
-   
-   // TODO: Aquire the mutex lock
    pthread_mutex_lock(&accept_con_mutex);
 
-   // TODO: Accept a new connection on the passive socket and save the fd to newsock
    newsock = accept(master_fd, (struct sockaddr*) &new_recv_addr, &addr_len);
 
-   // TODO: Release the mutex lock
    pthread_mutex_unlock(&accept_con_mutex);
 
-   // TODO: Return the file descriptor for the new client connection
    return newsock;
 }
-
-
-
 
 
 /**********************************************
@@ -129,16 +93,8 @@ int accept_connection(void) {
 ************************************************/
 int get_request(int fd, char *filename) {
 
-    /**********************************************
-  * IMPORTANT!
-  * THIS FUNCTION DOES NOT NEED TO BE COMPLETE FOR THE INTERIM SUBMISSION, BUT YOU WILL NEED
-  * CODE IN IT FOR THE INTERIM SUBMISSION!!!!! 
-  **********************************************/
-
-
   char buf[2048];
 
-  // INTERIM TODO: Read the request from the file descriptor into the buffer
   if ((read(fd, buf, sizeof(char)*2047)) == -1){
     printf("error reading fd \n");
   }
@@ -146,7 +102,6 @@ int get_request(int fd, char *filename) {
 
   // HINT: Attempt to read 2048 bytes from the file descriptor. 
 
-  // INTERIM TODO: Print the first line of the request to the terminal.
   int i = 0;
   printf("Interim: ");
   while ((buf[i] != '\n') && (buf[i] != '\0')){
@@ -157,12 +112,8 @@ int get_request(int fd, char *filename) {
 
   // TODO: Ensure that the incoming request is a properly formatted HTTP "GET" request
   // The first line of the request must be of the form: GET <file name> HTTP/1.0 
-  // or: GET <file name> HTTP/1.1
-  // HINT: It is recommended that you look up C string functions such as sscanf and strtok for
-  // help with parsing the request.
 
   //User request
-  // TODO: Extract the file name from the request
   char* method = strtok(buf, " \t\r\n");
   char* filePath = strtok(NULL," \t");
   char* protocol = strtok(NULL, " \t\r\n"); 
@@ -172,18 +123,17 @@ int get_request(int fd, char *filename) {
 
   if (strcmp(method, "GET") != 0) {
     fprintf(stderr, "Not proper format. Not GET\n");
+    return_error(fd, filename);
     return -1;
   }
   else if (strncmp(protocol, "HTTP/1.0", 8) != 0 && strncmp(protocol, "HTTP/1.1", 8) != 0) {
     fprintf(stderr, "Not proper format, HTTP");
+    return_error(fd, filename);
     return -1;
   }
-
-  // TODO: Ensure the file name does not contain with ".." or "//"
-  // FILE NAMES THAT CONTAIN ".." OR "//" ARE A SECURITY THREAT AND MUST NOT BE ACCEPTED!!!
-  // HINT: It is recommended that you look up the strstr function for help looking for faulty file names.
   else if (strstr(filePath, "..") || strstr(filePath, "//")){
-    fprintf(stderr, "Error: Not a valid file");
+    fprintf(stderr, "Error: Not a valid file\n");
+    return_error(fd, "Invalid File\n");
     return -1;
   }
   else {
@@ -195,9 +145,6 @@ int get_request(int fd, char *filename) {
     return 0;
   }
 }
-
-
-
 
 
 /**********************************************
@@ -222,13 +169,6 @@ int get_request(int fd, char *filename) {
 int return_result(int fd, char *content_type, char *buf, int numbytes) {
 
    // TODO: Prepare the headers for the response you will send to the client.
-   // REQUIRED: The first line must be "HTTP/1.0 200 OK"
-   // REQUIRED: Must send a line with the header "Content-Length: <file length>"
-   // REQUIRED: Must send a line with the header "Content-Type: <content type>"
-   // REQUIRED: Must send a line with the header "Connection: Close"
-   
-   // NOTE: The items above in angle-brackes <> are placeholders. The file length should be a number
-   // and the content type is a string which is passed to the function.
    
    /* EXAMPLE HTTP RESPONSE
     * 
@@ -240,12 +180,9 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     * <File contents>
     */
 
-
-   printf("Enter return_result\n");
   // TODO: Send the HTTP headers to the client
   char contentLength[1024]; //make these smaller later
   char contentType[1024];
-  
 
   char httpResponse[] = "HTTP/1.0 200 OK\n\0";
   sprintf(contentLength, "Content-Length: %d\n", numbytes);
@@ -274,12 +211,9 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
 
   // TODO: Close the connection to the client
   close(fd);
-  printf("Exit return_result");
+
   return 0;
 }
-
-
-
 
 
 /**********************************************
@@ -304,7 +238,6 @@ int return_error(int fd, char *buf) {
    // IMPORTANT: Similar to sending a file, there must be a blank line between the headers and the content.
    
    
-   
    /* EXAMPLE HTTP ERROR RESPONSE
     * 
     * HTTP/1.0 404 Not Found
@@ -314,13 +247,8 @@ int return_error(int fd, char *buf) {
     * <Error Message>
     */
 
-
-  printf("Enter return_error\n");
-
   int messagelen = strlen(buf);
   char contentLength[35];
-
-
 
   char notFound[] = "HTTP/1.0 404 Not Found\n\0"; // size = 24
   sprintf(contentLength, "Content-Length: %d\n", messagelen);
@@ -331,6 +259,7 @@ int return_error(int fd, char *buf) {
   write(fd, notFound, strlen(notFound));
   write(fd, contentLength, strlen(contentLength));
   write(fd, closeConnection, strlen(closeConnection));
+  write(fd, closeConnection, strlen(closeConnection));
 
   // TODO: Send the error message to the client
   write(fd, buf, messagelen);
@@ -338,12 +267,16 @@ int return_error(int fd, char *buf) {
   //Save error to file
   FILE *fpLog;
   fpLog = fopen("not_a_file", "a");
-  fprintf(fpLog, "%s\n", buf);
+  if (fpLog == NULL) {
+    perror("Error opening \"not_a_file\"\n");
+    exit(-1);
+  }
+  fprintf(fpLog, "Requested file not found.\n");
   fclose(fpLog);
   printf("print to file\n");
 
   // TODO: Close the connection with the client.
   close(fd);
-  printf("Exit return_error\n");
+
   return 0;
 }
