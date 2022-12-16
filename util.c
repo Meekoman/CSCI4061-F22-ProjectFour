@@ -179,23 +179,21 @@ int get_request(int fd, char *filename) {
     return -1;
   }
 
-
   // TODO: Ensure the file name does not contain with ".." or "//"
-  // FILE NAMES WHICH CONTAIN ".." OR "//" ARE A SECURITY THREAT AND MUST NOT BE ACCEPTED!!!
+  // FILE NAMES THAT CONTAIN ".." OR "//" ARE A SECURITY THREAT AND MUST NOT BE ACCEPTED!!!
   // HINT: It is recommended that you look up the strstr function for help looking for faulty file names.
-  
-  if (strstr(filePath, "..") || strstr(filePath, "//")){
-    fprintf(stderr, "Error: .. Found");
+  else if (strstr(filePath, "..") || strstr(filePath, "//")){
+    fprintf(stderr, "Error: Not a valid file");
     return -1;
   }
+  else {
+    // TODO: Copy the file name to the provided buffer so it can be used elsewhere
+    strncpy(filename, filePath, 1023);
 
+    printf("buffer: %s \n", filename);
 
-  // TODO: Copy the file name to the provided buffer so it can be used elsewhere
-  strncpy(filename, filePath, 1023);
-
-  printf("buffer: %s \n", filename);
-
-  return 0;
+    return 0;
+  }
 }
 
 
@@ -242,37 +240,42 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     * <File contents>
     */
 
-    // TODO: Send the HTTP headers to the client
-    char contentLength[1024]; //make these smaller later
-    char contentType[1024];
-    
 
-    char httpResponse[] = "HTTP/1.0 200 OK\n\0";
-    sprintf(contentLength, "Content-Length: %d\n", numbytes);
-    sprintf(contentType, "Content-Type: %s\n", content_type);
-    char closeConnection[] = "Connection: Close\n\n\0";
-    // IMPORTANT: Add an extra new-line to the end. There must be an empty line between the 
-    // headers and the file contents, as in the example above
+   printf("Enter return_result\n");
+  // TODO: Send the HTTP headers to the client
+  char contentLength[1024]; //make these smaller later
+  char contentType[1024];
+  
 
-    //debug: 
-    // fprintf(stderr, "HTTP Response:    %s", httpResponse);
-    // fprintf(stderr, "Content Length:   %s", contentLength);   
-    // fprintf(stderr, "Content type:     %s", contentType);
-    // fprintf(stderr, "Close Connection: %s", closeConnection);
+  char httpResponse[] = "HTTP/1.0 200 OK\n\0";
+  sprintf(contentLength, "Content-Length: %d\n", numbytes);
+  sprintf(contentType, "Content-Type: %s\n", content_type);
+  char closeConnection[] = "Connection: Close\n\n\0";
+  //Extra line isn't printing to terminal
 
-    write(fd, httpResponse, strlen(httpResponse));
-    write(fd, contentLength, strlen(contentLength));
-    write(fd, contentType, strlen(contentType));
-    write(fd, closeConnection, strlen(closeConnection));
-    
 
-    // TODO: Send the file contents to the client
-    write(fd, buf, numbytes);
-    
-    // TODO: Close the connection to the client
-    close(fd);
-    
-    return 0;
+  // IMPORTANT: Add an extra new-line to the end. There must be an empty line between the 
+  // headers and the file contents, as in the example above
+
+  //debug: 
+  // fprintf(stderr, "HTTP Response:    %s", httpResponse);
+  // fprintf(stderr, "Content Length:   %s", contentLength);   
+  // fprintf(stderr, "Content type:     %s", contentType);
+  // fprintf(stderr, "Close Connection: %s", closeConnection);
+
+  write(fd, httpResponse, strlen(httpResponse));
+  write(fd, contentLength, strlen(contentLength));
+  write(fd, contentType, strlen(contentType));
+  write(fd, closeConnection, strlen(closeConnection));
+
+
+  // TODO: Send the file contents to the client
+  write(fd, buf, numbytes);
+
+  // TODO: Close the connection to the client
+  close(fd);
+  printf("Exit return_result");
+  return 0;
 }
 
 
@@ -312,27 +315,35 @@ int return_error(int fd, char *buf) {
     */
 
 
-   
-   int messagelen = strlen(buf);
-   char contentLength[35];
+  printf("Enter return_error\n");
+
+  int messagelen = strlen(buf);
+  char contentLength[35];
 
 
 
   char notFound[] = "HTTP/1.0 404 Not Found\n\0"; // size = 24
   sprintf(contentLength, "Content-Length: %d\n", messagelen);
   char closeConnection[] = "Connection: Close\n\n\0 ";
+  //Extra line isn't printing to terminal 
 
+  // TODO: Send headers to the client
+  write(fd, notFound, strlen(notFound));
+  write(fd, contentLength, strlen(contentLength));
+  write(fd, closeConnection, strlen(closeConnection));
 
-    // TODO: Send headers to the client
-    write(fd, notFound, strlen(notFound));
-    write(fd, contentLength, strlen(contentLength));
-    write(fd, closeConnection, strlen(closeConnection));
+  // TODO: Send the error message to the client
+  write(fd, buf, messagelen);
 
-    // TODO: Send the error message to the client
-    write(fd, buf, messagelen);
+  //Save error to file
+  FILE *fpLog;
+  fpLog = fopen("not_a_file", "a");
+  fprintf(fpLog, "%s\n", buf);
+  fclose(fpLog);
+  printf("print to file\n");
 
-    // TODO: Close the connection with the client.
-    close(fd);
-
-    return 0;
+  // TODO: Close the connection with the client.
+  close(fd);
+  printf("Exit return_error\n");
+  return 0;
 }
