@@ -30,11 +30,13 @@ pthread_mutex_t accept_con_mutex = PTHREAD_MUTEX_INITIALIZER;
 void init(int port) {
   int sd; //socket file descriptor
   struct sockaddr_in addr;
-  int ret_val;
-  int flag;
    
   // This socket should be for use with IPv4 and for a TCP connection.
   sd = socket(PF_INET, SOCK_STREAM, 0);
+  if (sd == -1) {
+    perror("socket allocation failed \n");
+    exit(-1);
+  }
 
   int enable = 1;
   setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char*) &enable, sizeof(int));
@@ -96,52 +98,25 @@ int get_request(int fd, char *filename) {
   char buf[2048];
 
   if ((read(fd, buf, sizeof(char)*2047)) == -1){
-    printf("error reading fd \n");
+    perror("error reading fd \n");
   }
   buf[2047] = '\0'; // convert buffer to string since we'll need that later
 
-  // HINT: Attempt to read 2048 bytes from the file descriptor. 
-
-  int i = 0;
-  printf("Interim: ");
-  while ((buf[i] != '\n') && (buf[i] != '\0')){
-    printf("%c", buf[i]);
-    i++;
-  }
-  printf("\n");
-
-  // TODO: Ensure that the incoming request is a properly formatted HTTP "GET" request
-  // The first line of the request must be of the form: GET <file name> HTTP/1.0 
-
-  //User request
   char* method = strtok(buf, " \t\r\n");
   char* filePath = strtok(NULL," \t");
   char* protocol = strtok(NULL, " \t\r\n"); 
-  printf("Get: %s\n", method);
-  printf("File: %s\n", filePath);
-  printf("Protocol: %s\n", protocol);
 
   if (strcmp(method, "GET") != 0) {
-    fprintf(stderr, "Not proper format. Not GET\n");
-    return_error(fd, filename);
     return -1;
   }
   else if (strncmp(protocol, "HTTP/1.0", 8) != 0 && strncmp(protocol, "HTTP/1.1", 8) != 0) {
-    fprintf(stderr, "Not proper format, HTTP");
-    return_error(fd, filename);
     return -1;
   }
   else if (strstr(filePath, "..") || strstr(filePath, "//")){
-    fprintf(stderr, "Error: Not a valid file\n");
-    return_error(fd, "Invalid File\n");
     return -1;
   }
   else {
-    // TODO: Copy the file name to the provided buffer so it can be used elsewhere
     strncpy(filename, filePath, 1023);
-
-    printf("buffer: %s \n", filename);
-
     return 0;
   }
 }
@@ -167,9 +142,7 @@ int get_request(int fd, char *filename) {
    - returns 0 on success, nonzero on failure.
 ************************************************/
 int return_result(int fd, char *content_type, char *buf, int numbytes) {
-
-   // TODO: Prepare the headers for the response you will send to the client.
-   
+  
    /* EXAMPLE HTTP RESPONSE
     * 
     * HTTP/1.0 200 OK
@@ -180,25 +153,13 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
     * <File contents>
     */
 
-  // TODO: Send the HTTP headers to the client
-  char contentLength[1024]; //make these smaller later
+  char contentLength[1024]; 
   char contentType[1024];
 
   char httpResponse[] = "HTTP/1.0 200 OK\n\0";
   sprintf(contentLength, "Content-Length: %d\n", numbytes);
   sprintf(contentType, "Content-Type: %s\n", content_type);
   char closeConnection[] = "Connection: Close\n\n\0";
-  //Extra line isn't printing to terminal
-
-
-  // IMPORTANT: Add an extra new-line to the end. There must be an empty line between the 
-  // headers and the file contents, as in the example above
-
-  //debug: 
-  // fprintf(stderr, "HTTP Response:    %s", httpResponse);
-  // fprintf(stderr, "Content Length:   %s", contentLength);   
-  // fprintf(stderr, "Content type:     %s", contentType);
-  // fprintf(stderr, "Close Connection: %s", closeConnection);
 
   write(fd, httpResponse, strlen(httpResponse));
   write(fd, contentLength, strlen(contentLength));
@@ -273,7 +234,7 @@ int return_error(int fd, char *buf) {
   }
   fprintf(fpLog, "Requested file not found.\n");
   fclose(fpLog);
-  printf("print to file\n");
+  
 
   // TODO: Close the connection with the client.
   close(fd);
