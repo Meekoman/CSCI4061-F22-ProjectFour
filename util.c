@@ -28,10 +28,9 @@ pthread_mutex_t accept_con_mutex = PTHREAD_MUTEX_INITIALIZER;
    - if init encounters any errors, it will call exit().
 ************************************************/
 void init(int port) {
-  int sd; //socket file descriptor
+  int sd; 
   struct sockaddr_in addr;
    
-  // This socket should be for use with IPv4 and for a TCP connection.
   sd = socket(PF_INET, SOCK_STREAM, 0);
   if (sd == -1) {
     perror("socket allocation failed \n");
@@ -43,7 +42,7 @@ void init(int port) {
 
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port = htons(port); //server picks the port
+  addr.sin_port = htons(port); 
 
   bind (sd, (struct sockaddr*) &addr, sizeof(addr));
   
@@ -100,19 +99,22 @@ int get_request(int fd, char *filename) {
   if ((read(fd, buf, sizeof(char)*2047)) == -1){
     perror("error reading fd \n");
   }
-  buf[2047] = '\0'; // convert buffer to string since we'll need that later
+  buf[2047] = '\0'; // convert buffer to string since it'll be assumed to be one later
 
   char* method = strtok(buf, " \t\r\n");
   char* filePath = strtok(NULL," \t");
   char* protocol = strtok(NULL, " \t\r\n"); 
 
   if (strcmp(method, "GET") != 0) {
+    close(fd);
     return -1;
   }
   else if (strncmp(protocol, "HTTP/1.0", 8) != 0 && strncmp(protocol, "HTTP/1.1", 8) != 0) {
+    close(fd);
     return -1;
   }
-  else if (strstr(filePath, "..") || strstr(filePath, "//")){
+  else if ((strstr(filePath, "..") )|| (strstr(filePath, "//"))){
+    close(fd);
     return -1;
   }
   else {
@@ -142,16 +144,6 @@ int get_request(int fd, char *filename) {
    - returns 0 on success, nonzero on failure.
 ************************************************/
 int return_result(int fd, char *content_type, char *buf, int numbytes) {
-  
-   /* EXAMPLE HTTP RESPONSE
-    * 
-    * HTTP/1.0 200 OK
-    * Content-Length: <content length>
-    * Content-Type: <content type>
-    * Connection: Close
-    * 
-    * <File contents>
-    */
 
   char contentLength[1024]; 
   char contentType[1024];
@@ -161,16 +153,15 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
   sprintf(contentType, "Content-Type: %s\n", content_type);
   char closeConnection[] = "Connection: Close\n\n\0";
 
+  // header
   write(fd, httpResponse, strlen(httpResponse));
   write(fd, contentLength, strlen(contentLength));
   write(fd, contentType, strlen(contentType));
   write(fd, closeConnection, strlen(closeConnection));
-
-
-  // TODO: Send the file contents to the client
+  // file contents
   write(fd, buf, numbytes);
 
-  // TODO: Close the connection to the client
+
   close(fd);
 
   return 0;
@@ -188,55 +179,20 @@ int return_result(int fd, char *content_type, char *buf, int numbytes) {
 ************************************************/
 int return_error(int fd, char *buf) { 
 
-   // TODO: Prepare the headers to send to the client
-   // REQUIRED: First line must be "HTTP/1.0 404 Not Found"
-   // REQUIRED: Must send a header with the line: "Content-Length: <content length>"
-   // REQUIRED: Must send a header with the line: "Connection: Close"
-   
-   // NOTE: In this case, the content is what is passed to you in the argument "buf". This represents
-   // a server generated error message for the user. The length of that message should be the content-length.
-   
-   // IMPORTANT: Similar to sending a file, there must be a blank line between the headers and the content.
-   
-   
-   /* EXAMPLE HTTP ERROR RESPONSE
-    * 
-    * HTTP/1.0 404 Not Found
-    * Content-Length: <content length>
-    * Connection: Close
-    * 
-    * <Error Message>
-    */
-
   int messagelen = strlen(buf);
   char contentLength[35];
 
   char notFound[] = "HTTP/1.0 404 Not Found\n\0"; // size = 24
   sprintf(contentLength, "Content-Length: %d\n", messagelen);
   char closeConnection[] = "Connection: Close\n\n\0 ";
-  //Extra line isn't printing to terminal 
 
-  // TODO: Send headers to the client
+  // header
   write(fd, notFound, strlen(notFound));
   write(fd, contentLength, strlen(contentLength));
   write(fd, closeConnection, strlen(closeConnection));
-  write(fd, closeConnection, strlen(closeConnection));
+  // error message
+  write(fd, buf, messagelen);  
 
-  // TODO: Send the error message to the client
-  write(fd, buf, messagelen);
-
-  //Save error to file
-  FILE *fpLog;
-  fpLog = fopen("not_a_file", "a");
-  if (fpLog == NULL) {
-    perror("Error opening \"not_a_file\"\n");
-    exit(-1);
-  }
-  fprintf(fpLog, "Requested file not found.\n");
-  fclose(fpLog);
-  
-
-  // TODO: Close the connection with the client.
   close(fd);
 
   return 0;
